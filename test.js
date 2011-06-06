@@ -6,6 +6,9 @@ var assert = require('assert')
 var users = Store('users')
 var sessions = Store('sessions')
 
+users.clear()
+sessions.clear()
+
 users.set('john', 'doe')
 assert.equal(users.get('john'), 'doe')
 
@@ -34,9 +37,17 @@ users.set('mary', 'loo', function(err) {
           assert.equal(data, null)
         })
       })
-      
     })
   })
 })
 
+sessions.set('foo', { foo: 'bar' })
+sessions.set('bar', { bar: 'foo' })
+
+sessions.forEach(function(key) {
+  assert.deepEqual(this, sessions.get(key))
+})
+
+assert.equal(sessions.length(), 2)
+assert.deepEqual(sessions.list(), [ 'bar', 'foo' ])
 

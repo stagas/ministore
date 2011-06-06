@@ -8,10 +8,23 @@
 var path = require('path')
   , fs = require('fs')
 
-function Store(data, datafile) {
+function Store(name, data, datafile, options) {
+  this._name = name
+  this._options = options
   this._data = data
   this._datafile = datafile
   this._list = []
+  this._changes = 0
+  
+  if (this._options.polling) {
+    var self = this
+    setInterval(function() {
+      self.save(function(err) {}, true)
+    }, 'number' === typeof this._options.polling
+      ? this._options.polling
+      : 1000
+    )
+  }
 }
 
 Store.prototype.get = function(key, cb) {
@@ -27,11 +40,13 @@ Store.prototype.get = function(key, cb) {
 Store.prototype.set = function(key, val, cb) {
   if (null == key) return cb && cb(new Error('Need a key to set'))
   this._data[key] = val
+  this._changes++
   return this.save(cb)
 }
 
 Store.prototype.remove = function(key, cb) {
   delete this._data[key]
+  this._changes++
   return this.save(cb)
 }
 
@@ -50,11 +65,15 @@ Store.prototype.all = function(cb) {
 
 Store.prototype.clear = function(cb) {
   this._data = {}
+  this._changes++
   return this.save(cb)
 }
 
-Store.prototype.save = function(cb) {
+Store.prototype.save = function(cb, force) {
   this.list()
+  if (!force && this._options.polling) return cb && cb(null)
+  if (!this._changes) return cb && cb(new Error('Nothing to save ' + this._name))
+  this._changes = 0
   var s = JSON.stringify(this._data, null, '  ')
   return cb
     ? fs.writeFile(this._datafile, s, 'utf8', cb)
@@ -76,18 +95,35 @@ Store.prototype.length = function(cb) {
 }
 
 Store.prototype.forEach = function(fn) {
-  var result
+  var self = this, result
   this._list.forEach(function(key) {
+    result = self.get(key)
     fn.call(result, key, result)
   })
 }
 
-module.exports = function Base(base) {
+module.exports = function Base(base, baseOptions) {
+  // defaults
+  var options = {
+    polling: false
+  }
+
+  // overwrite defaults
+  for (var k in baseOptions) {
+    options[k] = baseOptions[k]
+  }
+
   // create base dir
   base = path.normalize(base)
   if (!path.existsSync(base)) fs.mkdirSync(base, 0755)
 
-  return function(name) {
+  return function(name, storeOptions) {
+    storeOptions = storeOptions || {}
+    for (var k in options) {
+      if ('undefined' === typeof storeOptions[k])
+        storeOptions[k] = options[k]
+    }
+
     // prevent directory changes
     name = name.replace(/(\.\.)+|\/+/gim, '')
 
@@ -99,6 +135,6 @@ module.exports = function Base(base) {
       data = {}
     }
 
-    return new Store(data, datafile)
+    return new Store(name, data, datafile, storeOptions)
   }
 }
