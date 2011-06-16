@@ -5,9 +5,11 @@ var assert = require('assert')
 
 var users = Store('users')
 var sessions = Store('sessions')
+var array = Store('array')
 
 users.clear()
 sessions.clear()
+array.clear()
 
 users.set('john', 'doe')
 assert.equal(users.get('john'), 'doe')
@@ -50,4 +52,11 @@ sessions.forEach(function(key) {
 
 assert.equal(sessions.length(), 2)
 assert.deepEqual(sessions.list(), [ 'bar', 'foo' ])
+
+array.push('foo', 'bar')
+array.unshift('foo', 'baz')
+assert.deepEqual(array.get('foo'), [ 'baz', 'bar' ])
+assert.equal(array.pop('foo'), 'bar')
+assert.equal(array.shift('foo'), 'baz')
+assert.deepEqual(array.get('foo'), [])
 

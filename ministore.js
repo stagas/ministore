@@ -7,6 +7,7 @@
 
 var path = require('path')
   , fs = require('fs')
+  , toSource = require('tosource')
 
 function Store(name, data, datafile, options) {
   this._name = name
@@ -44,6 +45,34 @@ Store.prototype.set = function(key, val, cb) {
   return this.save(cb)
 }
 
+;[ 'push', 'unshift' ].forEach(function(method) {
+  Store.prototype[method] = function(key, val, cb) {
+    if (null == key) return cb && cb(new Error('Need a key to ' + method))
+    if (!this.has(key)) this._data[key] = []
+    this._data[key][method](val)
+    this._changes++
+    return this.save(cb)
+  }
+})
+
+;[ 'shift', 'pop' ].forEach(function(method) {
+  Store.prototype[method] = function(key, cb) {
+    if (null == key) return cb && cb(new Error('Need a key to ' + method))
+    if (!this.has(key)) this._data[key] = []
+    var element = this._data[key][method]()
+    this._changes++
+    if (cb) {
+      this.save(function(err) {
+        if (err) cb && cb(err)
+        cb && cb(null, element)
+      })
+    } else {
+      this.save()
+      return element
+    }
+  }
+})
+
 Store.prototype.remove = function(key, cb) {
   delete this._data[key]
   this._changes++
@@ -74,7 +103,9 @@ Store.prototype.save = function(cb, force) {
   if (!force && this._options.polling) return cb && cb(null)
   if (!this._changes) return cb && cb(new Error('Nothing to save ' + this._name))
   this._changes = 0
-  var s = JSON.stringify(this._data, null, '  ')
+  var s = JSON.stringify(this._data, function(k, v) {
+    return toSource(v)
+  }, '  ')
   return cb
     ? fs.writeFile(this._datafile, s, 'utf8', cb)
     : fs.writeFileSync(this._datafile, s, 'utf8')
@@ -120,8 +151,9 @@ module.exports = function Base(base, baseOptions) {
   return function(name, storeOptions) {
     storeOptions = storeOptions || {}
     for (var k in options) {
-      if ('undefined' === typeof storeOptions[k])
+      if ('undefined' === typeof storeOptions[k]) {
         storeOptions[k] = options[k]
+      }
     }
 
     // prevent directory changes

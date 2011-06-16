@@ -14,7 +14,7 @@ var Store = require('ministore')('../path/to/db/dir')
 
 // create some collections
 var users = Store('users')
-var sessions = Store('sessions')
+var sessions = Store('sessions', { polling: 3000 }) // will save every 3 secs
 
 // sync way (no callback)
 users.set('john', 'doe')
@@ -37,6 +37,8 @@ All API methods accept a callback as the last argument, making the process async
 ### get(key)
 ### set(key, val)
 ### remove(key)
+### push(key, val) / unshift(key, val)
+### shift(key) / pop(key)
 ### has(key)
 ### all()
 ### clear()

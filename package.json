@@ -1,6 +1,6 @@
 { "name" : "ministore"
 , "description" : "ministore is a mini JSON file based key-value store"
-, "version" : "0.0.2"
+, "version" : "0.0.3"
 , "homepage" : "https://github.com/stagas/ministore"
 , "author" : "George Stagas <gstagas@gmail.com> (http://stagas.com/)"
 , "repository" :
@@ -8,5 +8,8 @@
   , "url" : "https://github.com/stagas/ministore.git"
   }
 , "main": "./ministore"
+, "dependencies": {
+    "tosource": ">=0.1.1"
+  }
 , "engines" : { "node" : ">=0.4.7" }
 }
