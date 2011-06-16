@@ -47,6 +47,8 @@ All API methods accept a callback as the last argument, making the process async
 ### forEach(fn)
 ### save()
 ### eval(key)
+### evalshift(key)
+### evalpop(key)
 
 Example: 
 
