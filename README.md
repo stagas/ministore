@@ -46,3 +46,14 @@ All API methods accept a callback as the last argument, making the process async
 ### length()
 ### forEach(fn)
 ### save()
+### eval(key)
+
+Example: 
+
+```javascript
+
+var math = require('ministore')('mdb')('math')
+math.set('add', function (a, b) { return a + b })
+math.eval('add')(4, 5) // 9
+
+```

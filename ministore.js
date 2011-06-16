@@ -7,7 +7,6 @@
 
 var path = require('path')
   , fs = require('fs')
-  , toSource = require('tosource')
 
 function Store(name, data, datafile, options) {
   this._name = name
@@ -40,7 +39,7 @@ Store.prototype.get = function(key, cb) {
 
 Store.prototype.set = function(key, val, cb) {
   if (null == key) return cb && cb(new Error('Need a key to set'))
-  this._data[key] = val
+  this._data[key] = 'function' === typeof val ? val.toString() : val
   this._changes++
   return this.save(cb)
 }
@@ -49,7 +48,7 @@ Store.prototype.set = function(key, val, cb) {
   Store.prototype[method] = function(key, val, cb) {
     if (null == key) return cb && cb(new Error('Need a key to ' + method))
     if (!this.has(key)) this._data[key] = []
-    this._data[key][method](val)
+    this._data[key][method]('function' === typeof val ? val.toString() : val)
     this._changes++
     return this.save(cb)
   }
@@ -60,6 +59,24 @@ Store.prototype.set = function(key, val, cb) {
     if (null == key) return cb && cb(new Error('Need a key to ' + method))
     if (!this.has(key)) this._data[key] = []
     var element = this._data[key][method]()
+    this._changes++
+    if (cb) {
+      this.save(function(err) {
+        if (err) cb && cb(err)
+        cb && cb(null, element)
+      })
+    } else {
+      this.save()
+      return element
+    }
+  }
+})
+
+;[ 'evalshift', 'evalpop' ].forEach(function(method) {
+  Store.prototype[method] = function(key, cb) {
+    if (null == key) return cb && cb(new Error('Need a key to ' + method))
+    if (!this.has(key)) this._data[key] = []
+    var element = eval('(' + this._data[key][method.substr(4)]() + ')')
     this._changes++
     if (cb) {
       this.save(function(err) {
@@ -103,9 +120,7 @@ Store.prototype.save = function(cb, force) {
   if (!force && this._options.polling) return cb && cb(null)
   if (!this._changes) return cb && cb(new Error('Nothing to save ' + this._name))
   this._changes = 0
-  var s = JSON.stringify(this._data, function(k, v) {
-    return toSource(v)
-  }, '  ')
+  var s = JSON.stringify(this._data, null, '  ')
   return cb
     ? fs.writeFile(this._datafile, s, 'utf8', cb)
     : fs.writeFileSync(this._datafile, s, 'utf8')
@@ -131,6 +146,10 @@ Store.prototype.forEach = function(fn) {
     result = self.get(key)
     fn.call(result, key, result)
   })
+}
+
+Store.prototype.eval = function(key) {
+  return eval('(' + this.get(key) + ')')
 }
 
 module.exports = function Base(base, baseOptions) {
