@@ -165,7 +165,7 @@ module.exports = function Base(base, baseOptions) {
 
   // create base dir
   base = path.normalize(base)
-  if (!path.existsSync(base)) fs.mkdirSync(base, 0755)
+  if (!fs.existsSync(base)) fs.mkdirSync(base, 0755)
 
   return function(name, storeOptions) {
     storeOptions = storeOptions || {}
